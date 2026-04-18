@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Olimpiad Family",
+    "slug": "olimpiad-family",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.olimpiadfamily.app"
+    },
+    "android": {
+      "package": "com.olimpiadfamily.app"
+    },
+    "web": {}
+  }
+}
