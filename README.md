@@ -59,3 +59,10 @@ To stop the server, press **Ctrl+C** in the terminal.
 & "C:\Program Files\nodejs\npm.cmd" install
 & "C:\Program Files\nodejs\npx.cmd" expo start
 ```
+
+
+## Build an android release version  
+
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+cd android
+.\gradlew.bat assembleRelease
