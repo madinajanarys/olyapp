@@ -74,3 +74,14 @@ npm install --global eas-cli
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 eas init --id 0d284465-14a4-4245-9aec-2a811d30eba6
 ```
+
+# EAS deploy
+```
+npx expo export --platform web  
+eas deploy
+```
+
+```
+npx expo export --platform web 
+eas deploy --prod
+```
