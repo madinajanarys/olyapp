@@ -66,3 +66,11 @@ To stop the server, press **Ctrl+C** in the terminal.
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 cd android
 .\gradlew.bat assembleRelease
+
+
+## EAS
+```
+npm install --global eas-cli  
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+eas init --id 0d284465-14a4-4245-9aec-2a811d30eba6
+```

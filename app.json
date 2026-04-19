@@ -1,11 +1,13 @@
 {
   "expo": {
     "name": "Olimpiad Family",
-    "slug": "olimpiad-family",
+    "slug": "olyapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.olimpiadfamily.app"
@@ -13,6 +15,12 @@
     "android": {
       "package": "com.olimpiadfamily.app"
     },
-    "web": {}
+    "web": {},
+    "extra": {
+      "eas": {
+        "projectId": "0d284465-14a4-4245-9aec-2a811d30eba6"
+      }
+    },
+    "owner": "madinajanarys"
   }
 }
