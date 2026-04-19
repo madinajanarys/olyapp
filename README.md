@@ -1,3 +1,24 @@
+# For the Jury  
+
+Source code:   
+https://github.com/madinajanarys/olyapp  
+
+Web version is available at:  
+https://olyapp.expo.app/
+
+Android version (APK) is available at:  
+https://github.com/madinajanarys/olyapp/blob/main/app.apk
+
+iOS version (IPA) will be available soon.
+
+
+
+
+
+
+
+
+
 # How-to install on Windows  
 
 - Install **Node.js v20.19 or higher** (required for Expo SDK 54) from https://nodejs.org/en/download
@@ -66,6 +87,7 @@ To stop the server, press **Ctrl+C** in the terminal.
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 cd android
 .\gradlew.bat assembleRelease
+// apk file will be in android\app\build\outputs\apk\release folder
 
 
 ## EAS
