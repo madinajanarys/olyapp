@@ -7,7 +7,7 @@ Web version is available at:
 https://olyapp.expo.app/
 
 Android version (APK) is available at:  
-https://github.com/madinajanarys/olyapp/blob/main/app.apk
+https://github.com/madinajanarys/olyapp/raw/refs/heads/main/app.apk
 
 iOS version (IPA) will be available soon.
 
