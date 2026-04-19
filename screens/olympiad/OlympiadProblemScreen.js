@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,13 +14,20 @@ import BackButton from '../../components/BackButton';
 import SelfAssessmentRubric from '../../components/SelfAssessmentRubric';
 import { getOlympiad, mockAiScore } from '../../data/olympiads';
 import { useApp } from '../../context/AppContext';
-import { matchesAnyCorrectAnswer } from '../../utils/answerCheck';
+import { useLanguage } from '../../context/LanguageContext';
+import { getLocalizedOlympiadProblem } from '../../i18n/olympiadI18n';
+import { matchesAnyCorrectAnswer, formatExpectedAnswers } from '../../utils/answerCheck';
 import { safeBackTo } from '../../utils/navigationSafeBack';
 
 export default function OlympiadProblemScreen({ navigation, route }) {
   const { olympiadId, problemId } = route.params;
+  const { t, currentLang } = useLanguage();
   const olympiad = getOlympiad(olympiadId);
-  const problem = olympiad?.problems.find((p) => p.id === problemId);
+  const baseProblem = olympiad?.problems.find((p) => p.id === problemId);
+  const problem = useMemo(
+    () => (baseProblem ? getLocalizedOlympiadProblem(baseProblem, currentLang) : null),
+    [baseProblem, currentLang]
+  );
   const { recordOlympiadScore, recordOlympiadAnswerCheck } = useApp();
 
   const [text, setText] = useState('');
@@ -30,15 +37,8 @@ export default function OlympiadProblemScreen({ navigation, route }) {
   const [aiResult, setAiResult] = useState(null);
   const [rubricMode, setRubricMode] = useState('none');
 
-  if (!problem) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text>Задача не найдена</Text>
-      </SafeAreaView>
-    );
-  }
-
-  const hasAutoCheck = Array.isArray(problem.correctAnswers) && problem.correctAnswers.length > 0;
+  const hasAutoCheck =
+    problem && Array.isArray(problem.correctAnswers) && problem.correctAnswers.length > 0;
 
   const runAi = () => {
     const r = mockAiScore(text);
@@ -46,13 +46,17 @@ export default function OlympiadProblemScreen({ navigation, route }) {
   };
 
   const onCheckAnswer = () => {
-    if (!hasAutoCheck) {
+    if (!problem || !hasAutoCheck) {
       setCheckResult('no_auto');
       return;
     }
-    const ok = matchesAnyCorrectAnswer(answerInput, problem.correctAnswers);
-    recordOlympiadAnswerCheck(olympiadId, problemId, ok);
-    setCheckResult(ok ? 'correct' : 'wrong');
+    const match = matchesAnyCorrectAnswer(answerInput, problem.correctAnswers);
+    if (match === null) {
+      setCheckResult('no_auto');
+      return;
+    }
+    recordOlympiadAnswerCheck(olympiadId, problemId, match);
+    setCheckResult(match ? 'correct' : 'wrong');
   };
 
   const onRubric = (score) => {
@@ -60,10 +64,21 @@ export default function OlympiadProblemScreen({ navigation, route }) {
     navigation.goBack();
   };
 
-  const onChangeAnswer = (t) => {
-    setAnswerInput(t);
+  const onChangeAnswer = (txt) => {
+    setAnswerInput(txt);
     if (checkResult != null) setCheckResult(null);
   };
+
+  if (!problem) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <BackButton
+          onPress={() => safeBackTo(navigation, 'OlympiadSession', { olympiadId })}
+        />
+        <Text style={styles.task}>{t('olympProblemNotFound')}</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -79,82 +94,98 @@ export default function OlympiadProblemScreen({ navigation, route }) {
           />
           <Text style={styles.task}>{problem.text}</Text>
 
-          {hasAutoCheck ? (
-            <>
-              <Text style={styles.label}>Ответ для проверки</Text>
-              <TextInput
-                style={styles.answerInput}
-                value={answerInput}
-                onChangeText={onChangeAnswer}
-                placeholder="Например: 405 или 2√2+2"
-                placeholderTextColor="#94a3b8"
-              />
-              <TouchableOpacity style={styles.checkBtn} onPress={onCheckAnswer}>
-                <Text style={styles.checkBtnText}>Проверить ответ</Text>
-              </TouchableOpacity>
-              {checkResult === 'correct' ? (
-                <View style={styles.okBox}>
-                  <Text style={styles.okTitle}>Верно</Text>
-                </View>
-              ) : null}
-              {checkResult === 'wrong' ? (
-                <View style={styles.badBox}>
-                  <Text style={styles.badTitle}>Неверно — смотрите разбор ниже</Text>
-                </View>
-              ) : null}
-            </>
+          <Text style={styles.label}>{t('olympProblemLabelAnswer')}</Text>
+          <TextInput
+            style={styles.answerInput}
+            value={answerInput}
+            onChangeText={onChangeAnswer}
+            placeholder={
+              hasAutoCheck ? t('olympProblemCheckPlaceholder') : t('olympProblemCheckPlaceholderNoAuto')
+            }
+            placeholderTextColor="#94a3b8"
+            editable={hasAutoCheck}
+          />
+          <TouchableOpacity
+            style={[styles.checkBtn, !hasAutoCheck && styles.checkBtnMuted]}
+            onPress={onCheckAnswer}
+          >
+            <Text style={styles.checkBtnText}>{t('topicProblemCheck')}</Text>
+          </TouchableOpacity>
+          {checkResult === 'correct' ? (
+            <View style={styles.okBox}>
+              <Text style={styles.okTitle}>{t('topicProblemOkTitle')}</Text>
+              <Text style={styles.okBody}>{t('topicProblemOkBody')}</Text>
+            </View>
+          ) : null}
+          {checkResult === 'wrong' ? (
+            <View style={styles.badBox}>
+              <Text style={styles.badTitle}>{t('topicProblemWrongTitle')}</Text>
+              <Text style={styles.badLead}>
+                {t('topicProblemWrongLead')} {formatExpectedAnswers(problem.correctAnswers)}
+              </Text>
+              <Text style={styles.badHint}>{t('olympProblemWrongHint')}</Text>
+            </View>
+          ) : null}
+          {checkResult === 'no_auto' ? (
+            <View style={styles.hintBox}>
+              <Text style={styles.hintBody}>
+                {hasAutoCheck ? t('olympProblemNoAutoParse') : t('olympProblemNoAutoNone')}
+              </Text>
+            </View>
           ) : null}
 
-          <Text style={styles.label}>Развёрнутое решение (по желанию)</Text>
+          <Text style={styles.label}>{t('olympProblemExpanded')}</Text>
           <TextInput
             style={styles.input}
             multiline
             value={text}
             onChangeText={setText}
-            placeholder="Пишите ход решения — для заглушки ИИ"
+            placeholder={t('olympProblemExpandedPlaceholder')}
             placeholderTextColor="#94a3b8"
           />
 
           <TouchableOpacity style={styles.aiBtn} onPress={runAi}>
-            <Text style={styles.aiBtnText}>Получить оценку ИИ (0–7, заглушка)</Text>
+            <Text style={styles.aiBtnText}>{t('olympProblemAiBtn')}</Text>
           </TouchableOpacity>
           {aiResult ? (
             <View style={styles.aiBox}>
-              <Text style={styles.aiScore}>Баллы: {aiResult.score} / 7</Text>
-              <Text style={styles.aiNote}>{aiResult.note}</Text>
+              <Text style={styles.aiScore}>
+                {t('olympProblemAiScore')} {aiResult.score} / 7
+              </Text>
+              <Text style={styles.aiNote}>{t(aiResult.noteKey)}</Text>
             </View>
           ) : null}
 
           {rubricMode === 'none' ? (
             <>
               <TouchableOpacity style={styles.secondary} onPress={() => setRubricMode('own')}>
-                <Text style={styles.secondaryText}>Оценить своё решение</Text>
+                <Text style={styles.secondaryText}>{t('topicProblemRateSelf')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.outline} onPress={() => setShowSample(true)}>
-                <Text style={styles.outlineText}>Посмотреть решение</Text>
+                <Text style={styles.outlineText}>{t('topicProblemViewSolution')}</Text>
               </TouchableOpacity>
             </>
           ) : null}
 
           {showSample && rubricMode === 'none' ? (
             <View style={styles.solBox}>
-              <Text style={styles.solTitle}>Образец решения</Text>
+              <Text style={styles.solTitle}>{t('olympProblemSampleTitle')}</Text>
               <Text style={styles.solBody}>{problem.solution}</Text>
               <TouchableOpacity style={styles.secondary} onPress={() => setRubricMode('after')}>
-                <Text style={styles.secondaryText}>Оценить после просмотра</Text>
+                <Text style={styles.secondaryText}>{t('topicProblemRateAfter')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
           {rubricMode === 'own' ? (
-            <SelfAssessmentRubric title="Самооценка" onSelect={onRubric} />
+            <SelfAssessmentRubric title={t('rubricTitleOwn')} onSelect={onRubric} />
           ) : null}
 
           {rubricMode === 'after' && showSample ? (
             <View style={styles.solBox}>
-              <Text style={styles.solTitle}>Образец решения</Text>
+              <Text style={styles.solTitle}>{t('olympProblemSampleTitle')}</Text>
               <Text style={styles.solBody}>{problem.solution}</Text>
-              <SelfAssessmentRubric title="Самооценка после просмотра" onSelect={onRubric} />
+              <SelfAssessmentRubric title={t('rubricTitleAfter')} onSelect={onRubric} />
             </View>
           ) : null}
         </ScrollView>
@@ -186,6 +217,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#14532d',
   },
+  checkBtnMuted: {
+    backgroundColor: '#94a3b8',
+    borderColor: '#64748b',
+  },
   checkBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   okBox: {
     padding: 12,
@@ -196,6 +231,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   okTitle: { fontSize: 16, fontWeight: '800', color: 'hsl(142, 50%, 22%)' },
+  okBody: { fontSize: 14, color: '#14532d', marginTop: 4, lineHeight: 20 },
   badBox: {
     padding: 12,
     borderRadius: 12,
@@ -205,6 +241,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badTitle: { fontSize: 15, fontWeight: '800', color: '#9a3412' },
+  badLead: { fontSize: 15, fontWeight: '600', color: '#0f172a', marginTop: 6, lineHeight: 22 },
+  badHint: { fontSize: 14, color: '#64748b', marginTop: 8, lineHeight: 20 },
+  hintBox: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 12,
+  },
+  hintBody: { fontSize: 14, color: '#475569', lineHeight: 20 },
   input: {
     borderWidth: 1,
     borderColor: '#cbd5e1',

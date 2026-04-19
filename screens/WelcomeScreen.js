@@ -1,36 +1,23 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  Pressable,
-} from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '../context/LanguageContext';
-
-const langLabels = { en: 'langEng', kk: 'langKaz', ru: 'langRus' };
+import { useApp } from '../context/AppContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function WelcomeScreen({ navigation }) {
-  const { t, currentLang, setLanguage } = useLanguage();
-  const [langModalVisible, setLangModalVisible] = useState(false);
+  const { t } = useLanguage();
+  const { hasCompletedRegistration } = useApp();
 
-  const selectLang = (lang) => {
-    setLanguage(lang);
-    setLangModalVisible(false);
-  };
+  useEffect(() => {
+    if (hasCompletedRegistration) {
+      navigation.replace('Main');
+    }
+  }, [hasCompletedRegistration, navigation]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.langRow}>
-        <TouchableOpacity
-          style={styles.langButton}
-          onPress={() => setLangModalVisible(true)}
-        >
-          <Text style={styles.langButtonText}>{t(langLabels[currentLang])}</Text>
-        </TouchableOpacity>
-      </View>
+      <LanguageSwitcher />
 
       <View style={styles.center}>
         <Text style={styles.title}>{t('welcomeTitle')}</Text>
@@ -41,46 +28,7 @@ export default function WelcomeScreen({ navigation }) {
         >
           <Text style={styles.primaryButtonText}>{t('signUp')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Login')}
-        >
-          <Text style={styles.secondaryButtonText}>{t('logIn')}</Text>
-        </TouchableOpacity>
       </View>
-
-      <Modal
-        visible={langModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLangModalVisible(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setLangModalVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => selectLang('en')}
-            >
-              <Text style={styles.modalOptionText}>{t('langEng')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => selectLang('kk')}
-            >
-              <Text style={styles.modalOptionText}>{t('langKaz')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => selectLang('ru')}
-            >
-              <Text style={styles.modalOptionText}>{t('langRus')}</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -89,21 +37,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  langRow: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    alignItems: 'flex-start',
-  },
-  langButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-  },
-  langButtonText: {
-    fontSize: 16,
-    color: '#333',
   },
   center: {
     flex: 1,
@@ -130,45 +63,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563eb',
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 12,
   },
   primaryButtonText: {
     fontSize: 17,
     fontWeight: '600',
     color: '#fff',
-  },
-  secondaryButton: {
-    width: '100%',
-    paddingVertical: 14,
-    backgroundColor: 'transparent',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#2563eb',
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#2563eb',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 8,
-    minWidth: 140,
-  },
-  modalOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  modalOptionText: {
-    fontSize: 17,
-    color: '#333',
   },
 });

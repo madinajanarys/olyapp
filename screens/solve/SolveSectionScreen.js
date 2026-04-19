@@ -2,24 +2,23 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
+import { safeBackTo } from '../../utils/navigationSafeBack';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function SolveSectionScreen({ navigation }) {
+  const { t } = useLanguage();
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <BackButton
-          onPress={() =>
-            navigation.canGoBack() ? navigation.goBack() : navigation.navigate('AlgebraMenu')
-          }
-        />
-        <Text style={styles.title}>Выбор раздела</Text>
-        <Text style={styles.sub}>Сейчас доступен раздел «Алгебра». Нажмите «Далее», чтобы выбрать тему.</Text>
+        <BackButton onPress={() => safeBackTo(navigation, 'AlgebraMenu')} />
+        <Text style={styles.title}>{t('solveSectionTitle')}</Text>
+        <Text style={styles.sub}>{t('solveSectionSub')}</Text>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Алгебра</Text>
-          <Text style={styles.cardSub}>Делимость, НОД, формулы, уравнения, неравенства</Text>
+          <Text style={styles.cardTitle}>{t('solveSectionCardAlgebra')}</Text>
+          <Text style={styles.cardSub}>{t('solveSectionCardSub')}</Text>
         </View>
         <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('AlgebraTopics')}>
-          <Text style={styles.primaryText}>Далее</Text>
+          <Text style={styles.primaryText}>{t('solveSectionNext')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

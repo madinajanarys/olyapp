@@ -1,23 +1,70 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations } from '../i18n/translations';
+import { uiStrings } from '../i18n/uiStrings';
+
+const LANG_STORAGE_KEY = '@olimpiad_family_app_lang';
 
 const LanguageContext = createContext(null);
 
+function isLangCode(v) {
+  return v === 'en' || v === 'ru' || v === 'kk';
+}
+
 export function LanguageProvider({ children }) {
-  const [currentLang, setCurrentLang] = useState('en');
+  const [currentLang, setCurrentLangState] = useState('en');
+  const [languageReady, setLanguageReady] = useState(false);
 
-  const t = (key) => {
-    const langTranslations = translations[currentLang];
-    return langTranslations && key in langTranslations
-      ? langTranslations[key]
-      : translations.en[key] || key;
-  };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(LANG_STORAGE_KEY);
+        if (!cancelled && isLangCode(raw)) {
+          setCurrentLangState(raw);
+        }
+      } finally {
+        if (!cancelled) setLanguageReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  return (
-    <LanguageContext.Provider value={{ currentLang, setLanguage: setCurrentLang, t }}>
-      {children}
-    </LanguageContext.Provider>
+  useEffect(() => {
+    if (!languageReady) return;
+    AsyncStorage.setItem(LANG_STORAGE_KEY, currentLang).catch(() => {});
+  }, [currentLang, languageReady]);
+
+  const setLanguage = useCallback((lang) => {
+    if (isLangCode(lang)) setCurrentLangState(lang);
+  }, []);
+
+  const t = useCallback(
+    (key) => {
+      const extra = uiStrings[currentLang];
+      if (extra && key in extra) return extra[key];
+      const langTranslations = translations[currentLang];
+      if (langTranslations && key in langTranslations) return langTranslations[key];
+      const fallbackExtra = uiStrings.en;
+      if (fallbackExtra && key in fallbackExtra) return fallbackExtra[key];
+      return translations.en[key] || key;
+    },
+    [currentLang]
   );
+
+  const value = useMemo(
+    () => ({
+      currentLang,
+      setLanguage,
+      t,
+      languageReady,
+    }),
+    [currentLang, setLanguage, t, languageReady]
+  );
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {

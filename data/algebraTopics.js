@@ -1,5 +1,6 @@
 /** Алгебра: темы, уроки и задачи */
 
+import { localizeLesson } from './lessonLocalize';
 import { divisibilityLesson } from './topicLessons/divisibility';
 import { gcdLesson } from './topicLessons/gcd';
 import { shortMultiplyLesson } from './topicLessons/shortMultiply';
@@ -50,8 +51,21 @@ const lessons = {
   inequalities: inequalitiesLesson,
 };
 
-export function getTopicLesson(topicId) {
-  return lessons[topicId];
+export function getTopicLesson(topicId, lang = 'ru') {
+  const raw = lessons[topicId];
+  if (!raw) return null;
+  return localizeLesson(raw, lang, topicId);
+}
+
+/** Найти задачу по id с учётом языка (для экрана задачи после смены языка). */
+export function getProblemById(topicId, problemId, lang = 'ru') {
+  const lesson = getTopicLesson(topicId, lang);
+  if (!lesson) return null;
+  for (const lv of ['easy', 'medium', 'hard']) {
+    const p = lesson.problems[lv]?.find((x) => x.id === problemId);
+    if (p) return p;
+  }
+  return null;
 }
 
 export function countTasksInTopic(topicId) {

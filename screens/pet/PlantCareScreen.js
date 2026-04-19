@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { getPlantStageInfo, speciesMeta } from '../../data/petSpeciesData';
+import { getSpeciesLabel } from '../../i18n/petLocale';
 
 function iconForPlantItem(sub) {
   if (sub.includes('water')) return '💧';
@@ -21,44 +23,62 @@ function iconForPlantItem(sub) {
 
 export default function PlantCareScreen({ navigation }) {
   const { inventory, consumeInventoryItem, plantSpecies, plantGrowth } = useApp();
+  const { t, currentLang } = useLanguage();
   const [selectedId, setSelectedId] = useState(null);
 
   const plantItems = inventory.filter((x) => x.category === 'plant');
   const growthPct = Math.min(100, Math.round(plantGrowth));
-  const stage = plantSpecies ? getPlantStageInfo(growthPct, plantSpecies) : null;
+  const stage = plantSpecies ? getPlantStageInfo(growthPct, plantSpecies, currentLang) : null;
   const meta = speciesMeta(plantSpecies);
+  const labelShown = plantSpecies
+    ? getSpeciesLabel(plantSpecies, currentLang) || meta.label
+    : '';
 
   const applyLong = () => {
     if (!selectedId) {
-      Alert.alert('Выберите', 'Нажмите на предмет в инвентаре.');
+      Alert.alert(t('plantSelectTitle'), t('plantAlertPick'));
       return;
     }
     consumeInventoryItem(selectedId);
     setSelectedId(null);
-    Alert.alert('Готово', 'Растение получило воду / удобрение! 🌱');
+    Alert.alert(t('plantAlertDone'));
   };
+
+  const subText = plantSpecies
+    ? `${t('plantCareSub')} (${labelShown})`
+    : t('plantCareSub');
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>Кормить растение</Text>
-        <Text style={styles.sub}>
-          Сначала в земле — зерно, затем стебель и листья; в конце появляется взрослое растение
-          {plantSpecies ? ` (${meta.label})` : ''}.
-          Выберите воду или удобрение, затем зажмите палец на земле.
-        </Text>
+        <Text style={styles.title}>{t('plantCareTitle')}</Text>
+        <Text style={styles.sub}>{subText}</Text>
 
         {stage ? (
           <View style={styles.stageCard}>
-            <Text style={styles.stageEmoji}>{stage.emoji}</Text>
+            <Text
+              style={[
+                styles.stageEmoji,
+                {
+                  fontSize: Math.min(
+                    72,
+                    Math.max(32, Math.round(48 * (stage.growthVisualScale ?? 1)))
+                  ),
+                },
+              ]}
+            >
+              {stage.emoji}
+            </Text>
             <Text style={styles.stageTitle}>{stage.title}</Text>
             <Text style={styles.stageDetail}>{stage.detail}</Text>
-            <Text style={styles.stagePct}>Рост: {growthPct}%</Text>
+            <Text style={styles.stagePct}>
+              {t('petGrowth')} {growthPct}%
+            </Text>
           </View>
         ) : null}
 
-        <Text style={styles.h2}>Инвентарь</Text>
+        <Text style={styles.h2}>{t('plantInventory')}</Text>
         <View style={styles.invRow}>
           {plantItems.map((it) => (
             <TouchableOpacity
@@ -74,7 +94,7 @@ export default function PlantCareScreen({ navigation }) {
           ))}
         </View>
 
-        <Text style={styles.h2}>Земля</Text>
+        <Text style={styles.h2}>{t('plantSoil')}</Text>
         <Pressable
           style={styles.soil}
           onLongPress={applyLong}
@@ -82,7 +102,7 @@ export default function PlantCareScreen({ navigation }) {
         >
           <Text style={styles.soilEmoji}>🟫</Text>
           <Text style={styles.soilHint}>
-            {selectedId ? 'Зажмите здесь, чтобы полить / удобрить' : 'Сначала выберите предмет выше'}
+            {selectedId ? t('plantHoldHint') : t('plantPickFirst')}
           </Text>
         </Pressable>
       </ScrollView>
@@ -133,7 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
     alignItems: 'center',
   },
-  stageEmoji: { fontSize: 48, marginBottom: 6 },
+  stageEmoji: { marginBottom: 6 },
   stageTitle: { fontSize: 17, fontWeight: '800', color: '#14532d' },
   stageDetail: { fontSize: 13, color: '#475569', textAlign: 'center', marginTop: 4, lineHeight: 18 },
   stagePct: { fontSize: 14, fontWeight: '700', color: '#166534', marginTop: 8 },

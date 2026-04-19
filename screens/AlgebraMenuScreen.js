@@ -14,9 +14,7 @@ export default function AlgebraMenuScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => safeBackTo(navigation, 'Main')} />
         <Text style={styles.title}>{t('menuAlgebra')}</Text>
-        <Text style={styles.sub}>
-          Выберите раздел: задачи по темам, пробные олимпиады, питомец и прогресс по темам.
-        </Text>
+        <Text style={styles.sub}>{t('algebraMenuSub')}</Text>
 
         <MainMenuButton
           variant="solve"

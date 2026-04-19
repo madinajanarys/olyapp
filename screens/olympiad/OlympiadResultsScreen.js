@@ -5,21 +5,25 @@ import BackButton from '../../components/BackButton';
 import { getOlympiad } from '../../data/olympiads';
 import { safeBackTo } from '../../utils/navigationSafeBack';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { getLocalizedOlympiadProblem, getOlympiadTitle } from '../../i18n/olympiadI18n';
 
 export default function OlympiadResultsScreen({ navigation, route }) {
   const { olympiadId } = route.params;
   const olympiad = getOlympiad(olympiadId);
   const { olympiadProgress } = useApp();
+  const { t, currentLang } = useLanguage();
 
   const stats = useMemo(() => {
     if (!olympiad) return null;
     const bucket = olympiadProgress[olympiadId] || {};
     const items = olympiad.problems.map((p) => {
+      const lp = getLocalizedOlympiadProblem(p, currentLang);
       const st = bucket[p.id];
       let status = '—';
       if (st?.answerCorrect === true) status = 'ok';
       else if (st?.answerCorrect === false) status = 'bad';
-      return { ...p, status };
+      return { ...lp, status, origId: p.id };
     });
     const correct = items.filter((x) => x.status === 'ok').length;
     const wrong = items.filter((x) => x.status === 'bad').length;
@@ -27,57 +31,61 @@ export default function OlympiadResultsScreen({ navigation, route }) {
     const total = items.length;
     const pct = total ? Math.round((correct / total) * 100) : 0;
     return { items, correct, wrong, unchecked, total, pct };
-  }, [olympiad, olympiadId, olympiadProgress]);
+  }, [olympiad, olympiadId, olympiadProgress, currentLang]);
 
   if (!olympiad || !stats) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text>Олимпиада не найдена</Text>
+        <Text>{t('olympiadNotFound')}</Text>
       </SafeAreaView>
     );
   }
+
+  const title = getOlympiadTitle(olympiad.id, currentLang, olympiad.title);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => safeBackTo(navigation, 'AlgebraMenu')} />
-        <Text style={styles.title}>Итоги</Text>
-        <Text style={styles.sub}>{olympiad.title}</Text>
+        <Text style={styles.title}>{t('resultsTitle')}</Text>
+        <Text style={styles.sub}>{title}</Text>
 
         <View style={styles.pctCard}>
-          <Text style={styles.pctLabel}>Результат</Text>
+          <Text style={styles.pctLabel}>{t('resultsResult')}</Text>
           <Text style={styles.pctValue}>{stats.pct}%</Text>
           <Text style={styles.pctHint}>
-            Верно: {stats.correct} из {stats.total}
-            {stats.wrong > 0 ? ` · неверно: ${stats.wrong}` : ''}
-            {stats.unchecked > 0 ? ` · без проверки: ${stats.unchecked}` : ''}
+            {t('resultsCorrect')} {stats.correct} {t('resultsOf')} {stats.total}
+            {stats.wrong > 0 ? `${t('resultsWrong')}${stats.wrong}` : ''}
+            {stats.unchecked > 0 ? `${t('resultsUnchecked')}${stats.unchecked}` : ''}
           </Text>
         </View>
 
-        <Text style={styles.h2}>Задачи</Text>
+        <Text style={styles.h2}>{t('olympProblems')}</Text>
         {stats.items.map((it, i) => (
-          <View key={it.id} style={styles.row}>
+          <View key={it.origId} style={styles.row}>
             <Text style={styles.badge}>
               {it.status === 'ok' ? '✓' : it.status === 'bad' ? '✗' : '○'}
             </Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{it.shortLabel || `Задача ${i + 1}`}</Text>
+              <Text style={styles.rowTitle}>
+                {it.shortLabel || `${t('resultsProblem')} ${i + 1}`}
+              </Text>
               <Text style={styles.rowSub} numberOfLines={2}>
                 {it.text}
               </Text>
               <Text style={styles.rowStat}>
                 {it.status === 'ok'
-                  ? 'Верно'
+                  ? t('resultsStatusOk')
                   : it.status === 'bad'
-                    ? 'Неверно'
-                    : 'Ответ не проверялся'}
+                    ? t('resultsStatusBad')
+                    : t('resultsStatusNone')}
               </Text>
             </View>
           </View>
         ))}
 
         <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('OlympiadList')}>
-          <Text style={styles.btnText}>К списку олимпиад</Text>
+          <Text style={styles.btnText}>{t('resultsToList')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

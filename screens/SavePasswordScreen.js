@@ -2,22 +2,31 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '../context/LanguageContext';
+import { useApp } from '../context/AppContext';
+import BackButton from '../components/BackButton';
+import { safeBackTo } from '../utils/navigationSafeBack';
 
 export default function SavePasswordScreen({ navigation }) {
   const { t } = useLanguage();
+  const { resetPetStateAfterRegistration } = useApp();
 
-  const handleYes = () => {
-    Alert.alert('', t('savePassword'), [{ text: 'OK' }]);
+  const goMain = () => {
+    resetPetStateAfterRegistration();
     navigation.navigate('Main');
   };
 
+  const handleYes = () => {
+    Alert.alert('', t('savePassword'), [{ text: 'OK', onPress: goMain }]);
+  };
+
   const handleNo = () => {
-    navigation.navigate('Main');
+    goMain();
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.content}>
+        <BackButton onPress={() => safeBackTo(navigation, 'SignUp')} />
         <Text style={styles.question}>{t('savePassword')}</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={handleYes}>
           <Text style={styles.primaryButtonText}>{t('yes')}</Text>

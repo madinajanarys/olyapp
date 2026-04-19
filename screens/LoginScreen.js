@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '../context/LanguageContext';
+import BackButton from '../components/BackButton';
+import { safeBackTo } from '../utils/navigationSafeBack';
 
 export default function LoginScreen({ navigation }) {
   const { t } = useLanguage();
@@ -20,6 +22,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.content}>
+        <BackButton onPress={() => safeBackTo(navigation, 'Welcome')} />
         <View style={styles.box}>
           <TextInput
             style={styles.input}

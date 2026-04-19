@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
 import SelfAssessmentRubric from '../../components/SelfAssessmentRubric';
 import { useApp } from '../../context/AppContext';
-import { matchesAnyCorrectAnswer } from '../../utils/answerCheck';
+import { useLanguage } from '../../context/LanguageContext';
+import { getProblemById } from '../../data/algebraTopics';
+import { matchesAnyCorrectAnswer, formatExpectedAnswers } from '../../utils/answerCheck';
+import { safeBackTo } from '../../utils/navigationSafeBack';
 
 export default function TopicProblemScreen({ navigation, route }) {
-  const { topicId, problem } = route.params;
-  const { recordTaskOutcome } = useApp();
+  const { topicId, problemId, problem: legacyProblem } = route.params;
+  const { currentLang, t } = useLanguage();
+  const problem =
+    (problemId && getProblemById(topicId, problemId, currentLang)) || legacyProblem;
+  const { recordTaskOutcome, solvedTaskKeys } = useApp();
   const [answer, setAnswer] = useState('');
   const [showSolution, setShowSolution] = useState(false);
   /** 'none' | 'own' | 'after_solution' */
@@ -25,30 +31,62 @@ export default function TopicProblemScreen({ navigation, route }) {
   /** null | 'correct' | 'wrong' | 'no_auto' */
   const [checkResult, setCheckResult] = useState(null);
 
-  const taskKey = `topic:${topicId}:${problem.id}`;
+  const taskKey = problem ? `topic:${topicId}:${problem.id}` : '';
+
+  const savedRubric = solvedTaskKeys[taskKey]?.rubricScore;
+
+  /** Подтянуть состояние проверки из сохранённого прогресса при открытии задачи. */
+  useEffect(() => {
+    if (savedRubric === undefined || savedRubric === null) return;
+    if (savedRubric > 5) setCheckResult('correct');
+    else if (savedRubric <= 1) setCheckResult('wrong');
+  }, [taskKey, savedRubric]);
 
   const onRubric = (score) => {
+    if (!problem) return;
     recordTaskOutcome(topicId, taskKey, problem.difficulty, score);
     navigation.goBack();
   };
 
   const canAutoCheck =
-    Array.isArray(problem.correctAnswers) && problem.correctAnswers.length > 0;
+    !!problem &&
+    Array.isArray(problem.correctAnswers) &&
+    problem.correctAnswers.length > 0;
 
-  const onChangeAnswer = (t) => {
-    setAnswer(t);
+  const onChangeAnswer = (txt) => {
+    setAnswer(txt);
     if (checkResult != null) setCheckResult(null);
   };
 
   const handleCheck = () => {
+    if (!problem) return;
     if (!canAutoCheck) {
       setCheckResult('no_auto');
       return;
     }
-    const ok = matchesAnyCorrectAnswer(answer, problem.correctAnswers);
-    if (ok) setCheckResult('correct');
-    else setCheckResult('wrong');
+    const match = matchesAnyCorrectAnswer(answer, problem.correctAnswers);
+    if (match === null) {
+      setCheckResult('no_auto');
+      return;
+    }
+    if (match) {
+      setCheckResult('correct');
+      /** Сохраняем прогресс сразу после автопроверки (+7 ≈ верно), иначе список задач не обновлялся без рубрики. */
+      recordTaskOutcome(topicId, taskKey, problem.difficulty, 7);
+    } else {
+      setCheckResult('wrong');
+      recordTaskOutcome(topicId, taskKey, problem.difficulty, 1);
+    }
   };
+
+  if (!problem) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <BackButton onPress={() => safeBackTo(navigation, 'AlgebraTopics')} />
+        <Text style={styles.task}>{t('lessonNotFound')}</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -57,55 +95,56 @@ export default function TopicProblemScreen({ navigation, route }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <BackButton
-            onPress={() =>
-              navigation.canGoBack() ? navigation.goBack() : navigation.navigate('AlgebraMenu')
-            }
-          />
+          <BackButton onPress={() => safeBackTo(navigation, 'AlgebraTopics')} />
 
           <Text style={styles.task}>{problem.text}</Text>
 
-          <Text style={styles.label}>Ваш ответ или ход решения</Text>
+          <Text style={styles.label}>{t('topicProblemAnswerLabel')}</Text>
           <TextInput
             style={styles.input}
             multiline
             value={answer}
             onChangeText={onChangeAnswer}
-            placeholder="Введите здесь"
+            placeholder={t('topicProblemPlaceholder')}
             placeholderTextColor="#94a3b8"
           />
 
           <TouchableOpacity style={styles.primary} onPress={handleCheck}>
-            <Text style={styles.primaryText}>Проверить ответ</Text>
+            <Text style={styles.primaryText}>{t('topicProblemCheck')}</Text>
           </TouchableOpacity>
 
           {checkResult === 'correct' ? (
             <View style={styles.okBox}>
-              <Text style={styles.okTitle}>Верно</Text>
-              <Text style={styles.okBody}>Ответ совпал с ожидаемым.</Text>
+              <Text style={styles.okTitle}>{t('topicProblemOkTitle')}</Text>
+              <Text style={styles.okBody}>{t('topicProblemOkBody')}</Text>
             </View>
           ) : null}
 
           {checkResult === 'wrong' ? (
             <View style={styles.wrongBox}>
-              <Text style={styles.wrongTitle}>Неверно — разбор этой задачи</Text>
-              <Text style={styles.wrongBody}>{problem.solution}</Text>
+              <Text style={styles.wrongTitle}>{t('topicProblemWrongTitle')}</Text>
+              <Text style={styles.wrongLead}>
+                {t('topicProblemWrongLead')} {formatExpectedAnswers(problem.correctAnswers)}
+              </Text>
+              {problem.solution ? (
+                <>
+                  <Text style={styles.wrongSection}>{t('topicProblemSectionSolution')}</Text>
+                  <Text style={styles.wrongBody}>{problem.solution}</Text>
+                </>
+              ) : null}
             </View>
           ) : null}
 
           {checkResult === 'no_auto' ? (
             <View style={styles.hintBox}>
-              <Text style={styles.hintBody}>
-                Для этой задачи нет автоматической проверки. Сравните ход с разбором кнопкой ниже
-                или оцените решение по рубрике.
-              </Text>
+              <Text style={styles.hintBody}>{t('topicProblemNoAuto')}</Text>
             </View>
           ) : null}
 
           {rubricMode === 'none' ? (
             <>
               <TouchableOpacity style={styles.secondary} onPress={() => setRubricMode('own')}>
-                <Text style={styles.secondaryText}>Оценить своё решение</Text>
+                <Text style={styles.secondaryText}>{t('topicProblemRateSelf')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -114,30 +153,30 @@ export default function TopicProblemScreen({ navigation, route }) {
                   setShowSolution(true);
                 }}
               >
-                <Text style={styles.outlineText}>Посмотреть решение</Text>
+                <Text style={styles.outlineText}>{t('topicProblemViewSolution')}</Text>
               </TouchableOpacity>
             </>
           ) : null}
 
           {showSolution && rubricMode === 'none' ? (
             <View style={styles.solBox}>
-              <Text style={styles.solTitle}>Решение</Text>
+              <Text style={styles.solTitle}>{t('topicProblemSolutionTitle')}</Text>
               <Text style={styles.solBody}>{problem.solution}</Text>
               <TouchableOpacity style={styles.secondary} onPress={() => setRubricMode('after_solution')}>
-                <Text style={styles.secondaryText}>Оценить после просмотра решения</Text>
+                <Text style={styles.secondaryText}>{t('topicProblemRateAfter')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
           {rubricMode === 'own' ? (
-            <SelfAssessmentRubric title="Самооценка (без просмотра решения)" onSelect={onRubric} />
+            <SelfAssessmentRubric title={t('rubricTitleOwn')} onSelect={onRubric} />
           ) : null}
 
           {rubricMode === 'after_solution' && showSolution ? (
             <View style={styles.solBox}>
-              <Text style={styles.solTitle}>Решение</Text>
+              <Text style={styles.solTitle}>{t('topicProblemSolutionTitle')}</Text>
               <Text style={styles.solBody}>{problem.solution}</Text>
-              <SelfAssessmentRubric title="Самооценка после просмотра решения" onSelect={onRubric} />
+              <SelfAssessmentRubric title={t('rubricTitleAfter')} onSelect={onRubric} />
             </View>
           ) : null}
         </ScrollView>
@@ -189,6 +228,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   wrongTitle: { fontSize: 16, fontWeight: '800', color: '#9a3412', marginBottom: 8 },
+  wrongLead: { fontSize: 15, fontWeight: '600', color: '#0f172a', marginBottom: 10, lineHeight: 22 },
+  wrongSection: { fontSize: 14, fontWeight: '700', color: '#64748b', marginBottom: 6 },
   wrongBody: { fontSize: 15, color: '#334155', lineHeight: 22 },
   hintBox: {
     padding: 12,

@@ -30,3 +30,22 @@ export function matchesAnyCorrectAnswer(userInput, correctAnswers) {
     return false;
   });
 }
+
+/**
+ * Строка для UI: ожидаемые ответы (без дубликатов, ограничение длины списка).
+ * @param {string[] | null | undefined} correctAnswers
+ */
+export function formatExpectedAnswers(correctAnswers, maxVariants = 6) {
+  if (!correctAnswers || !correctAnswers.length) return '—';
+  const seen = new Set();
+  const out = [];
+  for (const a of correctAnswers) {
+    if (a == null || String(a).trim() === '') continue;
+    const key = normalizeAnswer(a);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(String(a).trim());
+    if (out.length >= maxVariants) break;
+  }
+  return out.length ? out.join(' · ') : '—';
+}

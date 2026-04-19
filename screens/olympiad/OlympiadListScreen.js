@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
 import { OLYMPIADS } from '../../data/olympiads';
 import { safeBackTo } from '../../utils/navigationSafeBack';
+import { useLanguage } from '../../context/LanguageContext';
+import { getOlympiadTitle } from '../../i18n/olympiadI18n';
 
 function OlympiadRowIcon() {
   return (
@@ -14,16 +16,14 @@ function OlympiadRowIcon() {
 }
 
 export default function OlympiadListScreen({ navigation }) {
+  const { t, currentLang } = useLanguage();
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => safeBackTo(navigation, 'AlgebraMenu')} />
-        <Text style={styles.title}>Пробная олимпиада</Text>
-        <Text style={styles.sub}>
-          Два варианта по 4 задач (республиканский уровень). Перед стартом выберите время, затем Start —
-          рядом пожелание Good luck! В конце — процент верных и список задач. Ответ можно проверить кнопкой
-          «Проверить ответ».
-        </Text>
+        <Text style={styles.title}>{t('olympiadListTitle')}</Text>
+        <Text style={styles.sub}>{t('olympiadListSub')}</Text>
         {OLYMPIADS.map((o) => (
           <TouchableOpacity
             key={o.id}
@@ -35,8 +35,10 @@ export default function OlympiadListScreen({ navigation }) {
               <OlympiadRowIcon />
             </View>
             <View style={styles.mid}>
-              <Text style={styles.rowTitle}>{o.title}</Text>
-              <Text style={styles.rowSub}>{o.problems.length} задач</Text>
+              <Text style={styles.rowTitle}>{getOlympiadTitle(o.id, currentLang, o.title)}</Text>
+              <Text style={styles.rowSub}>
+                {o.problems.length} {t('olympiadProblemsCount')}
+              </Text>
             </View>
             <Text style={styles.chev}>›</Text>
           </TouchableOpacity>

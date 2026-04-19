@@ -1,19 +1,24 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-
-const OPTIONS = [
-  { score: 7, label: 'Решила правильно', short: '+7' },
-  { score: 5, label: 'Решила с маленькими недочётами', short: '+5' },
-  { score: 3, label: 'Не полное решение', short: '+3' },
-  { score: 1, label: 'Правильная идея', short: '+1' },
-  { score: 0, label: 'Неверно', short: '0' },
-];
+import { useLanguage } from '../context/LanguageContext';
 
 export default function SelfAssessmentRubric({ onSelect, title }) {
+  const { t } = useLanguage();
+  const OPTIONS = useMemo(
+    () => [
+      { score: 7, labelKey: 'rubricScore7', short: '+7' },
+      { score: 5, labelKey: 'rubricScore5', short: '+5' },
+      { score: 3, labelKey: 'rubricScore3', short: '+3' },
+      { score: 1, labelKey: 'rubricScore1', short: '+1' },
+      { score: 0, labelKey: 'rubricScore0', short: '0' },
+    ],
+    []
+  );
+
   return (
     <View style={styles.wrap}>
       {title ? <Text style={styles.title}>{title}</Text> : null}
-      <Text style={styles.hint}>Оцените свой результат честно — так точнее прогресс.</Text>
+      <Text style={styles.hint}>{t('rubricHint')}</Text>
       {OPTIONS.map((o) => (
         <TouchableOpacity
           key={o.score}
@@ -22,7 +27,7 @@ export default function SelfAssessmentRubric({ onSelect, title }) {
           accessibilityRole="button"
         >
           <Text style={styles.badge}>{o.short}</Text>
-          <Text style={styles.label}>{o.label}</Text>
+          <Text style={styles.label}>{t(o.labelKey)}</Text>
         </TouchableOpacity>
       ))}
     </View>

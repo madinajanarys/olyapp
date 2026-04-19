@@ -2,22 +2,19 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
+import { safeBackTo } from '../../utils/navigationSafeBack';
 import { TOPIC_IDS, topicTitle } from '../../data/algebraTopics';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function AlgebraTopicsScreen({ navigation }) {
-  const { currentLang } = useLanguage();
+  const { currentLang, t } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <BackButton
-          onPress={() =>
-            navigation.canGoBack() ? navigation.goBack() : navigation.navigate('AlgebraMenu')
-          }
-        />
-        <Text style={styles.title}>Темы</Text>
-        <Text style={styles.sub}>Выберите тему — откроется урок: сначала объяснение, затем примеры, затем задачи.</Text>
+        <BackButton onPress={() => safeBackTo(navigation, 'AlgebraMenu')} />
+        <Text style={styles.title}>{t('topicsTitle')}</Text>
+        <Text style={styles.sub}>{t('topicsSub')}</Text>
         {TOPIC_IDS.map((id) => (
           <TouchableOpacity
             key={id}

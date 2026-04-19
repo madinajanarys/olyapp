@@ -9,17 +9,14 @@ import { safeBackTo } from '../utils/navigationSafeBack';
 
 export default function ProgressScreen({ navigation }) {
   const { progressByTopic } = useApp();
-  const { currentLang } = useLanguage();
+  const { currentLang, t } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => safeBackTo(navigation, 'AlgebraMenu')} />
-        <Text style={styles.title}>Прогресс</Text>
-        <Text style={styles.sub}>
-          По темам из «Решать задачи»: «Решено» — задачи с самооценкой строго выше 5 баллов (только +7).
-          «Правильных среди оценённых» — доля попыток с оценкой 5 баллов и выше (+5 и +7).
-        </Text>
+        <Text style={styles.title}>{t('progressTitle')}</Text>
+        <Text style={styles.sub}>{t('progressSub')}</Text>
 
         {TOPIC_IDS.map((id) => {
           const total = countTasksInTopic(id);
@@ -30,16 +27,18 @@ export default function ProgressScreen({ navigation }) {
           return (
             <View key={id} style={styles.card}>
               <Text style={styles.topic}>{topicTitle(id, currentLang)}</Text>
-              <Text style={styles.line}>Решено по теме: {solvedPct}% ({p.solved} / {total})</Text>
+              <Text style={styles.line}>
+                {t('progressSolvedLine')} {solvedPct}% ({p.solved} / {total})
+              </Text>
               <Text style={styles.lineMuted}>
-                Правильных среди оценённых: {accPct}% ({p.correct} / {p.attempted})
+                {t('progressAccLine')} {accPct}% ({p.correct} / {p.attempted})
               </Text>
             </View>
           );
         })}
 
         <TouchableOpacity style={styles.link} onPress={() => navigation.navigate('AlgebraTopics')}>
-          <Text style={styles.linkText}>Перейти к задачам →</Text>
+          <Text style={styles.linkText}>{t('progressLinkTasks')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

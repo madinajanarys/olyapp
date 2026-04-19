@@ -12,6 +12,8 @@ function uid() {
 }
 
 const defaultState = () => ({
+  /** После первого входа на главный экран — при следующем запуске сразу Main (AsyncStorage). */
+  hasCompletedRegistration: false,
   coins: 0,
   /** @type {null | string} */
   animalSpecies: null,
@@ -25,6 +27,28 @@ const defaultState = () => ({
   /** @type {Array<{ id: string, sub: string, tier: number, growth: number, requiresCook: boolean, cooked: boolean, label: string, category: 'animal'|'plant' }>} */
   inventory: [],
 });
+
+/** Для старых сохранений без флага — не показывать Welcome, если уже есть прогресс. */
+function inferHasCompletedRegistration(raw) {
+  if (!raw || typeof raw !== 'object') return false;
+  if (raw.hasCompletedRegistration === true) return true;
+  if (Object.keys(raw.solvedTaskKeys || {}).length > 0) return true;
+  if ((raw.coins ?? 0) > 0) return true;
+  if (raw.animalSpecies || raw.plantSpecies || raw.petSpecies) return true;
+  const ag = typeof raw.animalGrowth === 'number' ? raw.animalGrowth : 0;
+  const pg = typeof raw.plantGrowth === 'number' ? raw.plantGrowth : 0;
+  const leg = typeof raw.petGrowth === 'number' ? raw.petGrowth : 0;
+  if (ag > 0.001 || pg > 0.001 || leg > 0.001) return true;
+  const p = raw.progressByTopic || {};
+  if (Object.values(p).some((x) => x && ((x.attempted ?? 0) > 0 || (x.solved ?? 0) > 0))) return true;
+  const o = raw.olympiadProgress || {};
+  for (const k of Object.keys(o)) {
+    const bucket = o[k];
+    if (bucket && typeof bucket === 'object' && Object.keys(bucket).length > 0) return true;
+  }
+  if (Array.isArray(raw.inventory) && raw.inventory.length > 0) return true;
+  return false;
+}
 
 function migrate(raw) {
   const d = defaultState();
@@ -74,8 +98,12 @@ function migrate(raw) {
     category: x.category || 'animal',
   }));
 
+  const hasCompletedRegistration =
+    inferHasCompletedRegistration(raw) || raw.hasCompletedRegistration === true;
+
   return {
     ...d,
+    hasCompletedRegistration,
     coins,
     animalSpecies,
     plantSpecies,
@@ -108,6 +136,13 @@ export function AppProvider({ children }) {
     return () => sub.remove();
   }, []);
 
+  /** Одна запись после коммита — избегает гонок setItem при быстрых обновлениях. */
+  useEffect(() => {
+    if (!ready) return;
+    stateRef.current = state;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
+  }, [ready, state]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -133,12 +168,12 @@ export function AppProvider({ children }) {
   }, []);
 
   const persist = useCallback((updater) => {
-    setState((s) => {
-      const next = typeof updater === 'function' ? updater(s) : updater;
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+    setState((s) => (typeof updater === 'function' ? updater(s) : updater));
   }, []);
+
+  const markSessionStarted = useCallback(() => {
+    persist((s) => (s.hasCompletedRegistration ? s : { ...s, hasCompletedRegistration: true }));
+  }, [persist]);
 
   /** kind: 'animal' | 'plant' — один активный питомец, второй вид сбрасывается */
   const setSpeciesForKind = useCallback((kind, speciesId) => {
@@ -403,6 +438,18 @@ export function AppProvider({ children }) {
     }));
   }, [persist]);
 
+  /** После регистрации: чистый питомец, но задачи/монеты/темы не трогаем. */
+  const resetPetStateAfterRegistration = useCallback(() => {
+    persist((s) => ({
+      ...s,
+      animalSpecies: null,
+      plantSpecies: null,
+      animalGrowth: 0,
+      plantGrowth: 0,
+      inventory: [],
+    }));
+  }, [persist]);
+
   const value = useMemo(
     () => ({
       ready,
@@ -422,6 +469,8 @@ export function AppProvider({ children }) {
       recordOlympiadScore,
       recordOlympiadAnswerCheck,
       clearOlympiadProgress,
+      resetPetStateAfterRegistration,
+      markSessionStarted,
       hasAnyPet: !!(state.animalSpecies || state.plantSpecies),
       isAnimalSpecies: (id) => isAnimalSpecies(id),
       isPlantSpecies: (id) => isPlantSpecies(id),
@@ -443,6 +492,8 @@ export function AppProvider({ children }) {
       recordOlympiadScore,
       recordOlympiadAnswerCheck,
       clearOlympiadProgress,
+      resetPetStateAfterRegistration,
+      markSessionStarted,
     ]
   );
 

@@ -2,6 +2,16 @@
  * Виды питомцев и стадии роста (шкала 0–100%, пороги 5, 30, 50, 70, 90, 100).
  */
 
+import {
+  PLANT_SPECIES_STAGES,
+  PLANT_DEFAULT_STAGES,
+  growthStageIndex,
+  getAnimalStageVisual,
+  getPlantVisualScale,
+} from './petGrowthStages';
+import { localizeAnimalStage, getSpeciesLabel, localizedPlantMature } from '../i18n/petLocale';
+import { mergePlantStage } from '../i18n/petPlantStagesI18n';
+
 export const ANIMAL_LIST = [
   { id: 'dog', label: 'Собака', emoji: '🐕' },
   { id: 'cat', label: 'Кошка', emoji: '🐈' },
@@ -49,122 +59,57 @@ export function speciesMeta(id) {
 /** Устаревшая константа (совместимость) */
 export const ANIMAL_STAR_THRESHOLD = 30;
 
-/** Стадии растения по порогам роста % */
-export function getPlantStageInfo(growthPct, speciesId) {
+/** Стадии растения: пороги 5%, 30%, 50%, 70%, 90%, 100%; у каждого вида свои тексты и эмодзи. */
+export function getPlantStageInfo(growthPct, speciesId, lang = 'ru') {
   const g = Math.min(100, Math.max(0, growthPct));
   const meta = speciesMeta(speciesId);
-  if (g <= 5) {
+  if (g >= 100) {
+    const mature = localizedPlantMature(speciesId, meta, lang);
     return {
-      stage: 0,
-      title: 'Семечко',
-      detail: 'Зерно в земле — полив и удобрения помогут прорасти.',
-      emoji: '🌰',
+      stage: 6,
+      title: mature.title,
+      detail: mature.detail,
+      emoji: meta.emoji,
+      growthVisualScale: 1.42,
     };
   }
-  if (g <= 30) {
-    return {
-      stage: 1,
-      title: 'Росток',
-      detail: 'Появился небольшой росток.',
-      emoji: '🌱',
-    };
-  }
-  if (g <= 50) {
-    return {
-      stage: 2,
-      title: 'Цветок',
-      detail: 'Уже виден цветок.',
-      emoji: '🌸',
-    };
-  }
-  if (g <= 70) {
-    return {
-      stage: 3,
-      title: 'Много цветов',
-      detail: 'Растение цветёт обильно.',
-      emoji: '💐',
-    };
-  }
-  if (g <= 90) {
-    return {
-      stage: 4,
-      title: 'Появляется дерево',
-      detail: 'Формируется дерево.',
-      emoji: '🌳',
-    };
-  }
-  if (g < 100) {
-    return {
-      stage: 5,
-      title: 'Дерево и цветы',
-      detail: 'Дерево рядом с цветами и травой.',
-      emoji: '🌳',
-    };
-  }
+  const idx = growthStageIndex(g);
+  const rows = PLANT_SPECIES_STAGES[speciesId] || PLANT_DEFAULT_STAGES;
+  const row = rows[Math.min(idx, rows.length - 1)];
+  const merged = mergePlantStage(speciesId, idx, row, lang);
   return {
-    stage: 6,
-    title: 'Полностью выросло',
-    detail: `${meta.label} выросло! Можно выбрать новое растение.`,
-    emoji: meta.emoji,
+    stage: idx,
+    title: merged.title,
+    detail: merged.detail,
+    emoji: row.emoji,
+    growthVisualScale: getPlantVisualScale(g),
   };
 }
 
-/** Стадии собаки (и др. животных) по порогам % */
-export function getAnimalStageInfo(growthPct, speciesId) {
-  const g = Math.min(100, Math.max(0, growthPct));
+/** Стадии животного: яйцо → вылупление → малыш → после 50% тот же вид, растёт масштаб. */
+export function getAnimalStageInfo(growthPct, speciesId, lang = 'ru') {
   const meta = speciesMeta(speciesId);
-  const isDog = speciesId === 'dog';
-
-  if (g <= 5) {
-    return {
-      title: isDog ? 'Яйцо / зародыш' : 'Самое начало',
-      emoji: isDog ? '🥚' : meta.emoji,
-      detail: isDog ? 'Пока как яйцо — скоро появится малыш.' : 'Малыш только появился.',
-    };
-  }
-  if (g <= 30) {
-    return {
-      title: isDog ? 'Маленький щенок' : 'Малыш',
-      emoji: meta.emoji,
-      detail: isDog
-        ? 'Крошечный щенок, почти без шерсти — как чихуахуа.'
-        : 'Питомец совсем маленький.',
-    };
-  }
-  if (g <= 50) {
-    return {
-      title: isDog ? 'Пушистый шпиц' : 'Подрастает',
-      emoji: meta.emoji,
-      detail: isDog ? 'Стал больше и пушистым, как померанский шпиц.' : 'Заметно подрос.',
-    };
-  }
-  if (g <= 70) {
-    return {
-      title: isDog ? 'Собака больше' : 'Почти взрослый',
-      emoji: meta.emoji,
-      detail: isDog ? 'Размер увеличивается.' : 'Уже почти взрослый.',
-    };
-  }
-  if (g <= 90) {
-    return {
-      title: 'Ещё больше',
-      emoji: meta.emoji,
-      detail: 'Продолжает расти.',
-    };
-  }
-  if (g < 100) {
-    return {
-      title: 'Почти максимум',
-      emoji: meta.emoji,
-      detail: 'Осталось совсем чуть-чуть.',
-    };
+  const v = getAnimalStageVisual(growthPct, meta);
+  const labelI18n = getSpeciesLabel(speciesId, lang) || meta.label;
+  let title = v.title;
+  let detail = v.detail;
+  if (lang !== 'ru') {
+    const loc = localizeAnimalStage(v.stageIndex, labelI18n, lang);
+    if (loc) {
+      title = loc.title;
+      detail = loc.detail;
+    }
   }
   return {
-    title: 'Полностью вырос',
-    emoji: meta.emoji,
-    detail: 'Можно начать заново с новым питомцем.',
+    title,
+    detail,
+    emoji: v.emoji,
+    growthVisualScale: v.visualScale,
+    stageIndex: v.stageIndex,
   };
 }
+
+export { GROWTH_THRESHOLDS } from './petGrowthStages';
 
 export function computeTopicStarTotal(solvedTaskKeys) {
   if (!solvedTaskKeys || typeof solvedTaskKeys !== 'object') return 0;

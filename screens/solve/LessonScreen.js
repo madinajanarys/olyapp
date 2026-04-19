@@ -5,6 +5,7 @@ import BackButton from '../../components/BackButton';
 import { getTopicLesson, topicTitle } from '../../data/algebraTopics';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApp } from '../../context/AppContext';
+import { safeBackTo } from '../../utils/navigationSafeBack';
 
 /** HSL ~50% saturation: зелёный +7, жёлтый +5/+3, красный 0–1 */
 function rowStylesForRubric(score) {
@@ -22,16 +23,16 @@ function rowStylesForRubric(score) {
 
 const LEVEL_KEYS = ['easy', 'medium', 'hard'];
 const DEFAULT_LEVEL_LABELS = {
-  easy: 'Лёгкий',
-  medium: 'Средний',
-  hard: 'Продвинутый',
+  easy: 'levelEasy',
+  medium: 'levelMedium',
+  hard: 'levelHard',
 };
 
 export default function LessonScreen({ navigation, route }) {
   const { topicId } = route.params;
-  const { currentLang } = useLanguage();
+  const { currentLang, t } = useLanguage();
   const { solvedTaskKeys } = useApp();
-  const lesson = getTopicLesson(topicId);
+  const lesson = getTopicLesson(topicId, currentLang);
 
   const taskStyleFor = useCallback(
     (problemId) => {
@@ -45,7 +46,7 @@ export default function LessonScreen({ navigation, route }) {
   if (!lesson) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>Тема не найдена</Text>
+        <Text>{t('lessonNotFound')}</Text>
       </SafeAreaView>
     );
   }
@@ -53,19 +54,15 @@ export default function LessonScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <BackButton
-          onPress={() =>
-            navigation.canGoBack() ? navigation.goBack() : navigation.navigate('AlgebraMenu')
-          }
-        />
+        <BackButton onPress={() => safeBackTo(navigation, 'AlgebraTopics')} />
         <Text style={styles.title}>{topicTitle(topicId, currentLang)}</Text>
 
-        <Text style={styles.h2}>Общее объяснение</Text>
+        <Text style={styles.h2}>{t('lessonExpl')}</Text>
         <Text style={styles.body}>{lesson.explanation}</Text>
 
         {lesson.examples && lesson.examples.length > 0 ? (
           <>
-            <Text style={styles.h2}>Примеры</Text>
+            <Text style={styles.h2}>{t('lessonExamples')}</Text>
             {lesson.examples.map((ex, i) => (
               <View key={i} style={styles.exCard}>
                 <Text style={styles.exQ}>{ex.text}</Text>
@@ -75,20 +72,17 @@ export default function LessonScreen({ navigation, route }) {
           </>
         ) : null}
 
-        <Text style={styles.h2}>Задачи</Text>
+        <Text style={styles.h2}>{t('lessonTasks')}</Text>
         <View style={styles.callout}>
-          <Text style={styles.calloutTitle}>Нажмите на задачу в списке</Text>
-          <Text style={styles.calloutBody}>
-            Откройте задачу, введите ответ и нажмите «Проверить ответ». Если ответ неверный, покажется разбор
-            именно этой задачи. При необходимости можно открыть полное решение кнопкой ниже.
-          </Text>
+          <Text style={styles.calloutTitle}>{t('lessonCalloutTitle')}</Text>
+          <Text style={styles.calloutBody}>{t('lessonCalloutBody')}</Text>
         </View>
 
         {LEVEL_KEYS.map((key) => {
           const list = lesson.problems[key] || [];
           if (!list.length) return null;
           const lvLabel =
-            (lesson.levelLabels && lesson.levelLabels[key]) || DEFAULT_LEVEL_LABELS[key];
+            (lesson.levelLabels && lesson.levelLabels[key]) || t(DEFAULT_LEVEL_LABELS[key]);
           return (
             <View key={key} style={styles.levelBlock}>
               <Text style={styles.levelTitle}>{lvLabel}</Text>
@@ -101,7 +95,7 @@ export default function LessonScreen({ navigation, route }) {
                   onPress={() =>
                     navigation.navigate('TopicProblem', {
                       topicId,
-                      problem: prob,
+                      problemId: prob.id,
                       indexInLevel: idx,
                     })
                   }
@@ -113,7 +107,7 @@ export default function LessonScreen({ navigation, route }) {
                     <Text style={rs.text} numberOfLines={2}>
                       {prob.text}
                     </Text>
-                    {prob.isSimple ? <Text style={styles.simpleTag}>простой пример</Text> : null}
+                    {prob.isSimple ? <Text style={styles.simpleTag}>{t('simpleTag')}</Text> : null}
                   </View>
                   <Text style={rs.chev}>›</Text>
                 </TouchableOpacity>

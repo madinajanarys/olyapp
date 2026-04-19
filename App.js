@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { AppProvider, useApp } from './context/AppContext';
 import WelcomeScreen from './screens/WelcomeScreen';
 import SignUpScreen from './screens/SignUpScreen';
@@ -21,6 +21,7 @@ import OlympiadResultsScreen from './screens/olympiad/OlympiadResultsScreen';
 import PetEntryScreen from './screens/pet/PetEntryScreen';
 import PetKindScreen from './screens/pet/PetKindScreen';
 import PetSpeciesScreen from './screens/pet/PetSpeciesScreen';
+import PetConfirmSpeciesScreen from './screens/pet/PetConfirmSpeciesScreen';
 import PetHubScreen from './screens/pet/PetHubScreen';
 import PetShopScreen from './screens/pet/PetShopScreen';
 import PetAnimalFoodScreen from './screens/pet/PetAnimalFoodScreen';
@@ -33,8 +34,9 @@ import ProgressScreen from './screens/ProgressScreen';
 const Stack = createNativeStackNavigator();
 
 function AppNavigation() {
-  const { ready } = useApp();
-  if (!ready) {
+  const { ready, hasCompletedRegistration } = useApp();
+  const { languageReady } = useLanguage();
+  if (!ready || !languageReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
         <ActivityIndicator size="large" color="#2563eb" />
@@ -44,7 +46,7 @@ function AppNavigation() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Welcome"
+        initialRouteName={hasCompletedRegistration ? 'Main' : 'Welcome'}
         screenOptions={{
           headerShown: false,
         }}
@@ -66,6 +68,7 @@ function AppNavigation() {
         <Stack.Screen name="Pet" component={PetEntryScreen} />
         <Stack.Screen name="PetKind" component={PetKindScreen} />
         <Stack.Screen name="PetSpecies" component={PetSpeciesScreen} />
+        <Stack.Screen name="PetConfirmSpecies" component={PetConfirmSpeciesScreen} />
         <Stack.Screen name="PetHub" component={PetHubScreen} />
         <Stack.Screen name="PetShop" component={PetShopScreen} />
         <Stack.Screen name="PetAnimalFood" component={PetAnimalFoodScreen} />

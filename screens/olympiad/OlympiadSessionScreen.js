@@ -13,6 +13,8 @@ import BackButton from '../../components/BackButton';
 import { getOlympiad } from '../../data/olympiads';
 import { safeBackTo } from '../../utils/navigationSafeBack';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { getLocalizedOlympiadProblem, getOlympiadTitle } from '../../i18n/olympiadI18n';
 
 const MINUTE_STEPS = [0, 15, 30, 45];
 const HOURS_RANGE = [0, 1, 2, 3, 4, 5];
@@ -26,14 +28,14 @@ function formatMs(ms) {
   return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
-function formatDurationMs(ms) {
+function formatDurationMs(ms, t) {
   const tm = Math.max(15, Math.floor(ms / 60000));
   const hh = Math.floor(tm / 60);
   const mm = tm % 60;
   const parts = [];
-  if (hh > 0) parts.push(`${hh} ч`);
-  if (mm > 0) parts.push(`${mm} мин`);
-  return parts.length ? parts.join(' ') : '15 мин';
+  if (hh > 0) parts.push(`${hh} ${t('durationH')}`);
+  if (mm > 0) parts.push(`${mm} ${t('durationMinUnit')}`);
+  return parts.length ? parts.join(' ') : `15 ${t('durationMinUnit')}`;
 }
 
 function durationFromClock(h, m) {
@@ -47,6 +49,7 @@ export default function OlympiadSessionScreen({ navigation, route }) {
   const { olympiadId } = route.params;
   const olympiad = getOlympiad(olympiadId);
   const { olympiadProgress, clearOlympiadProgress } = useApp();
+  const { t, currentLang } = useLanguage();
 
   const [hour, setHour] = useState(2);
   const [minute, setMinute] = useState(0);
@@ -95,7 +98,6 @@ export default function OlympiadSessionScreen({ navigation, route }) {
     setStarted(true);
   };
 
-  /** Сброс ответов + таймер с полной выбранной длительности и немедленный отсчёт (без второго Start). */
   const restartSessionFromClock = () => {
     const ms = durationFromClock(hourRef.current, minuteRef.current);
     clearOlympiadProgress(olympiadId);
@@ -107,15 +109,14 @@ export default function OlympiadSessionScreen({ navigation, route }) {
   };
 
   const onAgain = () => {
-    const body =
-      'Сбросятся ответы по этой олимпиаде, таймер начнётся заново с выбранной длительности (отсчёт сразу).';
+    const body = t('olymAgainBody');
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      if (window.confirm(`Сначала?\n\n${body}`)) restartSessionFromClock();
+      if (window.confirm(`${t('olymAgainTitle')}\n\n${body}`)) restartSessionFromClock();
       return;
     }
-    Alert.alert('Сначала?', body, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Again', onPress: restartSessionFromClock },
+    Alert.alert(t('olymAgainTitle'), body, [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('olympAgain'), onPress: restartSessionFromClock },
     ]);
   };
 
@@ -126,24 +127,24 @@ export default function OlympiadSessionScreen({ navigation, route }) {
   if (!olympiad) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>Олимпиада не найдена</Text>
+        <Text>{t('olympiadNotFound')}</Text>
       </SafeAreaView>
     );
   }
 
-  const progress = olympiadProgress[olympiadId] || {};
+  const sessionTitle = getOlympiadTitle(olympiad.id, currentLang, olympiad.title);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => safeBackTo(navigation, 'AlgebraMenu')} />
-        <Text style={styles.title}>{olympiad.title}</Text>
+        <Text style={styles.title}>{sessionTitle}</Text>
 
         {!started ? (
           <View style={styles.clockBlock}>
-            <Text style={styles.clockTitle}>Выберите время на олимпиаду</Text>
+            <Text style={styles.clockTitle}>{t('olymSessionPickTime')}</Text>
             <View style={styles.rowPick}>
-              <Text style={styles.pickLabel}>Часы</Text>
+              <Text style={styles.pickLabel}>{t('olymSessionHours')}</Text>
               <View style={styles.chips}>
                 {HOURS_RANGE.map((h) => (
                   <TouchableOpacity
@@ -157,7 +158,7 @@ export default function OlympiadSessionScreen({ navigation, route }) {
               </View>
             </View>
             <View style={styles.rowPick}>
-              <Text style={styles.pickLabel}>Минуты</Text>
+              <Text style={styles.pickLabel}>{t('olymSessionMinutes')}</Text>
               <View style={styles.chips}>
                 {MINUTE_STEPS.map((m) => (
                   <TouchableOpacity
@@ -170,44 +171,44 @@ export default function OlympiadSessionScreen({ navigation, route }) {
                 ))}
               </View>
             </View>
-            <Text style={styles.durationSummary}>Итого: {formatDurationMs(selectedDurationMs)}</Text>
+            <Text style={styles.durationSummary}>
+              {t('olymSessionTotal')} {formatDurationMs(selectedDurationMs, t)}
+            </Text>
           </View>
         ) : null}
 
         <View style={styles.timer}>
-          <Text style={styles.timerLabel}>{started ? 'Осталось времени' : 'Таймер'}</Text>
+          <Text style={styles.timerLabel}>{started ? t('olymTimerLeft') : t('olymTimerLabel')}</Text>
           <Text style={styles.timerValue}>{formatMs(left)}</Text>
         </View>
 
         {!started ? (
           <View style={styles.startRow}>
             <TouchableOpacity style={styles.startBtn} onPress={onStart} activeOpacity={0.9}>
-              <Text style={styles.startBtnText}>Start</Text>
+              <Text style={styles.startBtnText}>{t('olympStart')}</Text>
             </TouchableOpacity>
-            <Text style={styles.goodLuck}>Good luck!</Text>
+            <Text style={styles.goodLuck}>{t('olympGoodLuck')}</Text>
           </View>
         ) : (
           <View style={styles.afterStart}>
             <TouchableOpacity style={styles.againBtn} onPress={onAgain}>
-              <Text style={styles.againBtnText}>Again</Text>
+              <Text style={styles.againBtnText}>{t('olympAgain')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.finishBtn} onPress={onFinish}>
-              <Text style={styles.finishBtnText}>Завершить и итоги</Text>
+              <Text style={styles.finishBtnText}>{t('olympFinish')}</Text>
             </TouchableOpacity>
           </View>
         )}
 
         <View style={styles.callout}>
-          <Text style={styles.calloutTitle}>Как решать</Text>
-          <Text style={styles.calloutBody}>
-            Откройте задачу после Start. Введите ответ и нажмите «Проверить ответ»; в конце нажмите
-            «Завершить и итоги» или дождитесь конца времени — появится процент и список задач.
-          </Text>
+          <Text style={styles.calloutTitle}>{t('olympHowTitle')}</Text>
+          <Text style={styles.calloutBody}>{t('olympHowBody')}</Text>
         </View>
 
-        <Text style={styles.h2}>Задачи</Text>
+        <Text style={styles.h2}>{t('olympProblems')}</Text>
         {olympiad.problems.map((p, i) => {
-          const st = progress[p.id];
+          const lp = getLocalizedOlympiadProblem(p, currentLang);
+          const st = (olympiadProgress[olympiadId] || {})[p.id];
           let mark = '';
           if (st?.answerCorrect === true) mark = '✓ ';
           else if (st?.answerCorrect === false) mark = '✗ ';
@@ -217,7 +218,7 @@ export default function OlympiadSessionScreen({ navigation, route }) {
               style={[styles.row, !started && styles.rowDisabled]}
               onPress={() => {
                 if (!started) {
-                  Alert.alert('Олимпиада', 'Сначала нажмите Start и выберите время выше.');
+                  Alert.alert(t('olympiadAlertTitle'), t('olymAlertStartFirst'));
                   return;
                 }
                 navigation.navigate('OlympiadProblem', {
@@ -232,8 +233,8 @@ export default function OlympiadSessionScreen({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.preview} numberOfLines={2}>
                   {mark}
-                  {p.shortLabel ? `${p.shortLabel}. ` : ''}
-                  {p.text}
+                  {lp.shortLabel ? `${lp.shortLabel}. ` : ''}
+                  {lp.text}
                 </Text>
               </View>
               <Text style={styles.chev}>›</Text>

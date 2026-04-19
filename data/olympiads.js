@@ -102,11 +102,11 @@ export function getOlympiad(id) {
   return OLYMPIADS.find((o) => o.id === id);
 }
 
-/** Заглушка под будущую ИИ-оценку (0–7). */
+/** Заглушка под будущую ИИ-оценку (0–7). noteKey — для t() в UI. */
 export function mockAiScore(solutionText) {
-  const t = (solutionText || '').trim();
-  if (t.length < 3) return { score: 0, note: 'Пустой или слишком короткий ответ.' };
-  if (t.length < 40) return { score: 3, note: 'Есть текст, но рассуждения краткие (заглушка).' };
-  if (t.length < 200) return { score: 5, note: 'Структура решения заметна (заглушка).' };
-  return { score: 6, note: 'Развёрнутое решение (заглушка; подключите ИИ).' };
+  const s = (solutionText || '').trim();
+  if (s.length < 3) return { score: 0, noteKey: 'mockAiEmpty' };
+  if (s.length < 40) return { score: 3, noteKey: 'mockAiBrief' };
+  if (s.length < 200) return { score: 5, noteKey: 'mockAiStructured' };
+  return { score: 6, noteKey: 'mockAiLong' };
 }

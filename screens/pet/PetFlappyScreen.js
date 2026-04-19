@@ -10,6 +10,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { safeBackTo } from '../../utils/navigationSafeBack';
 import { speciesMeta } from '../../data/petSpeciesData';
 
 const FPS = 30;
@@ -36,6 +38,7 @@ function randObstacleTarget() {
 export default function PetFlappyScreen({ navigation, route }) {
   const { itemId } = route.params || {};
   const { inventory, consumeInventoryItem, animalSpecies, plantSpecies } = useApp();
+  const { t } = useLanguage();
   const { width: W, height: H } = useWindowDimensions();
 
   const item = itemId ? inventory.find((x) => x.id === itemId) : null;
@@ -136,11 +139,11 @@ export default function PetFlappyScreen({ navigation, route }) {
 
   useEffect(() => {
     if (!itemId || !item) {
-      Alert.alert('Нет еды', 'Вы не можете играть, потому что у вас нет еды.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert(t('petFlappyNoFoodTitle'), t('petFlappyNoFoodBody'), [
+        { text: t('btnOk'), onPress: () => safeBackTo(navigation, 'PetHub') },
       ]);
     }
-  }, [item, itemId, navigation]);
+  }, [item, itemId, navigation, t]);
 
   useEffect(() => {
     if (!itemId || !item) return undefined;
@@ -175,7 +178,7 @@ export default function PetFlappyScreen({ navigation, route }) {
 
       const by = birdY.current;
       if (by - x / 2 < 0 || by + x / 2 > playableH) {
-        endFail(by + x / 2 > playableH ? 'Упали на землю.' : 'Слишком высоко.');
+        endFail(by + x / 2 > playableH ? t('petFlappyHitGround') : t('petFlappyTooHigh'));
         return;
       }
 
@@ -185,7 +188,7 @@ export default function PetFlappyScreen({ navigation, route }) {
           const topH = p.gapY - GAP / 2;
           const gapBottom = p.gapY + GAP / 2;
           if (by - x / 2 < topH || by + x / 2 > gapBottom) {
-            endFail('Попали в препятствие.');
+            endFail(t('petFlappyHitPipe'));
             return;
           }
         }
@@ -219,6 +222,7 @@ export default function PetFlappyScreen({ navigation, route }) {
     replayToken,
     GAP,
     x,
+    t,
   ]);
 
   const onFlap = () => {
@@ -229,8 +233,8 @@ export default function PetFlappyScreen({ navigation, route }) {
   if (!itemId || !item) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.err}>Нет подходящей еды.</Text>
+        <BackButton onPress={() => safeBackTo(navigation, 'PetHub')} />
+        <Text style={styles.err}>{t('petFlappyNoItem')}</Text>
       </SafeAreaView>
     );
   }
@@ -241,7 +245,7 @@ export default function PetFlappyScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.bar}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton onPress={() => safeBackTo(navigation, 'PetHub')} />
         <Text style={styles.barText} numberOfLines={1}>
           {cleared.current} / {targetTotal.current}
         </Text>
@@ -290,19 +294,19 @@ export default function PetFlappyScreen({ navigation, route }) {
       </Pressable>
 
       <View style={[styles.ground, { width: W, height: GROUND }]}>
-        <Text style={styles.groundHint}>Нажмите по экрану — прыжок</Text>
+        <Text style={styles.groundHint}>{t('petFlappyTapJump')}</Text>
       </View>
 
       {overlay?.type === 'fail' ? (
         <View style={styles.overlay} pointerEvents="box-none">
           <View style={styles.overlayCard}>
-            <Text style={styles.overlayTitle}>Не прошли</Text>
+            <Text style={styles.overlayTitle}>{t('petFlappyFailTitle')}</Text>
             <Text style={styles.overlayMsg}>{overlay.message}</Text>
             <Pressable style={styles.btnAgain} onPress={restartGame}>
-              <Text style={styles.btnAgainText}>Again</Text>
+              <Text style={styles.btnAgainText}>{t('petFlappyAgain')}</Text>
             </Pressable>
-            <Pressable style={styles.btnBack} onPress={() => navigation.goBack()}>
-              <Text style={styles.btnBackText}>Назад</Text>
+            <Pressable style={styles.btnBack} onPress={() => safeBackTo(navigation, 'PetHub')}>
+              <Text style={styles.btnBackText}>{t('petBackBtn')}</Text>
             </Pressable>
           </View>
         </View>
@@ -311,10 +315,10 @@ export default function PetFlappyScreen({ navigation, route }) {
       {overlay?.type === 'win' ? (
         <View style={styles.overlay} pointerEvents="box-none">
           <View style={styles.overlayCard}>
-            <Text style={styles.overlayTitle}>Отлично!</Text>
-            <Text style={styles.overlayMsg}>Питомец получил еду.</Text>
+            <Text style={styles.overlayTitle}>{t('petFlappyWinTitle')}</Text>
+            <Text style={styles.overlayMsg}>{t('petFlappyWinMsg')}</Text>
             <Pressable style={styles.btnAgain} onPress={() => navigation.navigate('PetHub')}>
-              <Text style={styles.btnAgainText}>OK</Text>
+              <Text style={styles.btnAgainText}>{t('btnOk')}</Text>
             </Pressable>
           </View>
         </View>

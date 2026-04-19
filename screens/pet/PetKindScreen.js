@@ -3,22 +3,24 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { reasonCannotOpenAnimalSpecies, reasonCannotOpenPlantSpecies } from '../../utils/petSelectionGuards';
 
 export default function PetKindScreen({ navigation }) {
   const { animalSpecies, animalGrowth, plantSpecies, plantGrowth } = useApp();
+  const { t } = useLanguage();
   const ctx = { animalSpecies, animalGrowth, plantSpecies, plantGrowth };
 
   const showBlocked = (msg) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.alert(`Питомец\n\n${msg}`);
+      window.alert(`${t('petAlertTitle')}\n\n${msg}`);
       return;
     }
-    Alert.alert('Питомец', msg);
+    Alert.alert(t('petAlertTitle'), msg);
   };
 
   const openAnimals = () => {
-    const r = reasonCannotOpenAnimalSpecies(ctx);
+    const r = reasonCannotOpenAnimalSpecies(ctx, t);
     if (r) {
       showBlocked(r);
       return;
@@ -27,7 +29,7 @@ export default function PetKindScreen({ navigation }) {
   };
 
   const openPlants = () => {
-    const r = reasonCannotOpenPlantSpecies(ctx);
+    const r = reasonCannotOpenPlantSpecies(ctx, t);
     if (r) {
       showBlocked(r);
       return;
@@ -42,21 +44,17 @@ export default function PetKindScreen({ navigation }) {
           navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Pet')
         }
       />
-      <Text style={styles.title}>Выберите тип питомца</Text>
-      <Text style={styles.sub}>
-        В первый раз можно выбрать любой тип и любое животное или растение из списка. Нового питомца
-        можно будет выбрать только после того, как текущий вырастет до 100% и вы нажмёте «Новый
-        питомец» в экране ухода.
-      </Text>
+      <Text style={styles.title}>{t('petKindTitle')}</Text>
+      <Text style={styles.sub}>{t('petKindSub')}</Text>
 
       <View style={styles.row}>
         <TouchableOpacity style={styles.square} onPress={openAnimals} activeOpacity={0.9}>
           <Text style={styles.squareEmoji}>🐾</Text>
-          <Text style={styles.squareLabel}>Питомец</Text>
+          <Text style={styles.squareLabel}>{t('petKindAnimalCard')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.square, styles.squareRight]} onPress={openPlants} activeOpacity={0.9}>
           <Text style={styles.squareEmoji}>🌱</Text>
-          <Text style={styles.squareLabel}>Растение</Text>
+          <Text style={styles.squareLabel}>{t('petKindPlantCard')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

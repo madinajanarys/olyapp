@@ -3,19 +3,21 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../../components/BackButton';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { ANIMAL_LIST, PLANT_LIST } from '../../data/petSpeciesData';
+import { getSpeciesLabel } from '../../i18n/petLocale';
 import {
   reasonCannotOpenAnimalSpecies,
   reasonCannotOpenPlantSpecies,
 } from '../../utils/petSelectionGuards';
 
-function SpeciesCard({ emoji, title, onSelect }) {
+function SpeciesCard({ emoji, title, onSelect, pickLabel }) {
   return (
     <View style={styles.card}>
       <Text style={styles.bigEmoji}>{emoji}</Text>
       <Text style={styles.cardTitle}>{title}</Text>
       <TouchableOpacity style={styles.pickBtn} onPress={onSelect} activeOpacity={0.9}>
-        <Text style={styles.pickBtnText}>Выбрать</Text>
+        <Text style={styles.pickBtnText}>{pickLabel}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -24,44 +26,46 @@ function SpeciesCard({ emoji, title, onSelect }) {
 export default function PetSpeciesScreen({ navigation, route }) {
   /** Явно «animal» | «plant» — если params потерялись, не путаем список и проверки. */
   const kind = route.params?.kind === 'plant' ? 'plant' : 'animal';
-  const { setSpeciesForKind, animalSpecies, animalGrowth, plantSpecies, plantGrowth } = useApp();
+  const { animalSpecies, animalGrowth, plantSpecies, plantGrowth } = useApp();
+  const { t, currentLang } = useLanguage();
   const list = kind === 'animal' ? ANIMAL_LIST : PLANT_LIST;
 
   const choose = (id) => {
     const ctx = { animalSpecies, animalGrowth, plantSpecies, plantGrowth };
     const reason =
-      kind === 'animal' ? reasonCannotOpenAnimalSpecies(ctx) : reasonCannotOpenPlantSpecies(ctx);
+      kind === 'animal'
+        ? reasonCannotOpenAnimalSpecies(ctx, t)
+        : reasonCannotOpenPlantSpecies(ctx, t);
     if (reason) {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert(`Питомец\n\n${reason}`);
+        window.alert(`${t('petAlertTitle')}\n\n${reason}`);
       } else {
-        Alert.alert('Питомец', reason);
+        Alert.alert(t('petAlertTitle'), reason);
       }
       return;
     }
-    setSpeciesForKind(kind, id);
-    navigation.reset({
-      index: 1,
-      routes: [{ name: 'Main' }, { name: 'PetHub' }],
-    });
+    navigation.navigate('PetConfirmSpecies', { kind, speciesId: id });
   };
+
+  const subBase = t('petSpeciesSub');
+  const subExtra = kind === 'plant' ? t('petSpeciesSubPlantExtra') : t('petSpeciesSubAnimalExtra');
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>{kind === 'animal' ? 'Выберите животное' : 'Выберите растение'}</Text>
+        <Text style={styles.title}>
+          {kind === 'animal' ? t('petSpeciesTitleAnimal') : t('petSpeciesTitlePlant')}
+        </Text>
         <Text style={styles.sub}>
-          За решённые задачи начисляются монеты — ими можно купить корм, воду и удобрения в магазине.
-          {kind === 'plant'
-            ? ' У каждого семечка указано, каким растением оно станет.'
-            : ' Нажмите «Выбрать» у нужного животного — пока оно не вырастит до конца, другое выбрать нельзя.'}
+          {subBase} {subExtra}
         </Text>
         {list.map((item) => (
           <SpeciesCard
             key={item.id}
             emoji={kind === 'plant' ? '🌰' : item.emoji}
-            title={item.label}
+            title={getSpeciesLabel(item.id, currentLang) || item.label}
+            pickLabel={t('petSpeciesPick')}
             onSelect={() => choose(item.id)}
           />
         ))}

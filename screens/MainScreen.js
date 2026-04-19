@@ -1,13 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '../context/LanguageContext';
+import { useApp } from '../context/AppContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function MainScreen({ navigation }) {
   const { t } = useLanguage();
+  const { markSessionStarted } = useApp();
+
+  useEffect(() => {
+    markSessionStarted();
+  }, [markSessionStarted]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <LanguageSwitcher />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>{t('mainTitle')}</Text>
         <Text style={styles.sub}>{t('mainSubtitle')}</Text>
